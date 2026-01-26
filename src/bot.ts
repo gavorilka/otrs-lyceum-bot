@@ -15,20 +15,6 @@ const otrs = new OtrsApiClient(otrsBaseUrl);
 console.log("Токен:", botToken);
 bot.use(session({ initial: (): SessionData => ({ state: null, tmpLogin: null }) }));
 
-
-// Главное меню с 4 кнопками
-// const menu = new InlineKeyboard()
-//     .text("Родитель", "btn1")
-//     .text("Ученик", "btn2").row()
-//     .text("Сотрудник", "btn3")
-//     .text("Кнопка 4", "btn4");
-//
-// const menu2 = new InlineKeyboard()
-//     .text("Кнопка5", "btn5").row()
-//     .text("Кнопка 6", "btn6").row()
-//     .text("Кнопка 7", "btn7").row()
-//     .text("Кнопка 8", "btn8");
-
 bot.command("start", async (ctx) => {
   //await ctx.reply("Привет! Вот меню:", { reply_markup: menu });
   await ctx.reply(`Привет, ${ctx.from?.first_name}! Отправь /login чтобы связать Telegram с аккаунтом OTRS.`);
@@ -79,13 +65,6 @@ bot.on('message:text', async (ctx) => {
     return;
   }
 });
-
-
-// Обработка нажатий
-// bot.callbackQuery("btn1", async (ctx) => await ctx.reply("Нажата кнопка 1",{ reply_markup: menu2 }));
-// bot.callbackQuery("btn2", (ctx) => ctx.answerCallbackQuery("Нажата кнопка 2"));
-// bot.callbackQuery("btn3", (ctx) => ctx.answerCallbackQuery("Нажата кнопка 3"));
-// bot.callbackQuery("btn4", (ctx) => ctx.answerCallbackQuery("Нажата кнопка 4"));
 
 bot.catch((err) => {
   const ctx = err.ctx
