@@ -1,0 +1,40 @@
+{
+  "name": "otrs-lyceum-bot",
+  "description": "telegram bot for connect with OTRS 6.x.x CE api use RS4OTRS_API",
+  "keywords": [
+    "OTRS",
+    "lyceum369",
+    "bot"
+  ],
+  "homepage": "https://github.com/gavorilka/otrs-lyceum-bot#readme",
+  "bugs": {
+    "url": "https://github.com/gavorilka/otrs-lyceum-bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/gavorilka/otrs-lyceum-bot.git"
+  },
+  "version": "1.0.0",
+  "main": "main.js",
+  "author": "Ivan Gavrilov",
+  "license": "MIT",
+  "scripts": {
+    "dev": "tsx --watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "grammy": "^1.38.2"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.10",
+    "@types/express": "^5.0.3",
+    "@types/node": "^25.0.10",
+    "@types/node-fetch": "^2.6.13",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
