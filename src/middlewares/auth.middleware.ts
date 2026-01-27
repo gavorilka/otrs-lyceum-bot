@@ -1,9 +1,10 @@
 import { MiddlewareFn } from "grammy";
-import UserService from "../services/user.service";
 import {MyContext} from "../types/bot.interface";
+import otrsApiService from "../services/otrsApi.service";
+import userService from "../services/user.service";
 
-export const requireAuth: MiddlewareFn<MyContext> = async (ctx, next) => {
-    const user = await UserService.getUser(ctx);
+export const authMiddleware: MiddlewareFn<MyContext> = async (ctx, next) => {
+    const user = await userService.getUser(ctx);
 
     if (!user) {
         await ctx.reply(
@@ -12,6 +13,10 @@ export const requireAuth: MiddlewareFn<MyContext> = async (ctx, next) => {
         return;
     }
 
+    otrsApiService.auth = {
+        OTRSAgentInterface: user.otrsSessionToken,
+        ChallengeToken: user.otrsChallengeToken
+    }
     // если надо — кладём пользователя в ctx
     ctx.user = user;
     await next();

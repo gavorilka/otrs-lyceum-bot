@@ -1,6 +1,11 @@
 import fetch from 'node-fetch';
 import {otrsBaseUrl} from "../config/vars";
 
+type OtrsAuth = {
+    OTRSAgentInterface: string;
+    ChallengeToken: string;
+};
+
 export class OtrsApiService {
 
     protected _baseUrl: string;
@@ -9,6 +14,20 @@ export class OtrsApiService {
     constructor(baseUrl: string) {
         this._baseUrl = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/api`;
         this._auth = { OTRSAgentInterface: null, ChallengeToken: null };
+    }
+
+    set auth(value: OtrsAuth) {
+        if (
+            !value.ChallengeToken ||
+            !value.OTRSAgentInterface
+        ) {
+            throw new Error('auth must contain string fields OTRSAgentInterface and ChallengeToken');
+        }
+
+        this._auth = {
+            OTRSAgentInterface: value.OTRSAgentInterface,
+            ChallengeToken: value.ChallengeToken,
+        };
     }
 
     protected async _request(endpoint: string, data = {}) {

@@ -1,8 +1,8 @@
-import {Bot, GrammyError, HttpError, InlineKeyboard, session} from "grammy";
+import {Bot, GrammyError, HttpError, session} from "grammy";
 import {botToken} from "./config/vars";
 import {MyContext, SessionData} from "./types/bot.interface";
 import otrsApiService from "./services/otrsApi.service";
-import {requireAuth} from "./middlewares/requireAuth";
+import {authMiddleware} from "./middlewares/auth.middleware";
 import userService from "./services/user.service";
 
 const bot = new Bot<MyContext>(botToken);
@@ -18,28 +18,26 @@ const publicCommands = [
 ];
 
 const privateCommands = [
-  { command: "me", description: "Мой профиль" },
+  //{ command: "me", description: "Мой профиль" },
   { command: "tickets", description: "Мои тикеты" },
   { command: "logout", description: "Выйти" },
 ];
 
-bot.command("start", async (ctx) => {
-  const user = await userService.getUser(ctx);
+bot.command("start",authMiddleware, async (ctx) => {
 
-  if (user) {
+  if (ctx.user) {
     await ctx.api.setMyCommands(privateCommands, {
       scope: { type: "chat", chat_id: ctx.chat!.id },
     });
 
-    await ctx.reply(`С возвращением, ${user.otrsLogin}!`);
+    await ctx.reply(`С возвращением, ${ctx.user.otrsLogin}!`);
   } else {
     await ctx.api.setMyCommands(publicCommands, {
       scope: {type: "chat", chat_id: ctx.chat!.id},
     });
+    await ctx.reply(`Привет, ${ctx.from?.first_name}! Отправь /login чтобы связать Telegram с аккаунтом OTRS.`);
   }
-
   //await ctx.reply("Привет! Вот меню:", { reply_markup: menu });
-  await ctx.reply(`Привет, ${ctx.from?.first_name}! Отправь /login чтобы связать Telegram с аккаунтом OTRS.`);
   console.log(ctx);
 });
 
@@ -48,11 +46,24 @@ bot.command('login', async (ctx) => {
   await ctx.reply('Введи логин OTRS:');
 });
 
-bot.command('me', requireAuth, async (ctx) => {
-  const user = ctx.user;
+bot.command('tickets', authMiddleware, async (ctx) => {
   const ticketList = await otrsApiService.getTicketList({ UserLogin: 'agent1' });
   console.log(ticketList)
   await ctx.reply(`Ответ ${ticketList}`);
+});
+
+bot.command("logout", authMiddleware, async (ctx) => {
+  // await userService.delete({
+  //   telegramUserId: ctx.from!.id,
+  // });
+
+  console.log(await otrsApiService.logout())
+
+  await ctx.api.setMyCommands(publicCommands, {
+    scope: { type: "chat", chat_id: ctx.chat!.id },
+  });
+
+  await ctx.reply("👋 Ты вышел из системы. Используй /login для входа.");
 });
 
 // обработка текстов в зависимости от state
