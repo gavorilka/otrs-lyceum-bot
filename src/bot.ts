@@ -1,4 +1,4 @@
-import {Bot, GrammyError, HttpError, session} from "grammy";
+import {Bot, GrammyError, HttpError, InlineKeyboard, session} from "grammy";
 import {botToken} from "./config/vars";
 import {MyContext, SessionData} from "./types/bot.interface";
 import otrsApiService from "./services/otrsApi.service";
@@ -23,7 +23,7 @@ const privateCommands = [
   { command: "logout", description: "Выйти" },
 ];
 
-bot.command("start",authMiddleware, async (ctx) => {
+bot.command("start", authMiddleware, async (ctx) => {
 
   if (ctx.user) {
     await ctx.api.setMyCommands(privateCommands, {
@@ -47,9 +47,22 @@ bot.command('login', async (ctx) => {
 });
 
 bot.command('tickets', authMiddleware, async (ctx) => {
-  const ticketList = await otrsApiService.getTicketList({ UserLogin: 'agent1' });
-  console.log(ticketList)
-  await ctx.reply(`Ответ ${ticketList}`);
+  try {
+    const response = await otrsApiService.getTicketList();
+    if (!('Tickets' in response)) {
+      return new Error("Response does not contain Tickets")
+    }
+
+    const ticketList = new InlineKeyboard()
+
+    for (const  ticket of response.Tickets) {
+      ticketList.text(ticket.Title, `ticket:${ticket.TicketNumber}`).row()
+    }
+
+    await ctx.reply(`Твои заявки: `, { reply_markup: ticketList });
+  } catch (error) {
+
+  }
 });
 
 bot.command("logout", authMiddleware, async (ctx) => {
@@ -64,6 +77,23 @@ bot.command("logout", authMiddleware, async (ctx) => {
   });
 
   await ctx.reply("👋 Ты вышел из системы. Используй /login для входа.");
+});
+
+bot.callbackQuery(/^ticket:(\d+)$/, async (ctx) => {
+  const ticketNumber = ctx.match[1];  // извлекаем номер тикета из callback_data
+
+  await ctx.answerCallbackQuery(`Загружаю тикет #${ticketNumber}`);
+
+  try {
+    // тут можно загрузить детали тикета по номеру
+    //const ticketDetails = await otrsApiService.getTicket(ticketNumber); // если есть такой метод
+    await ctx.reply(`Детали тикета #${ticketNumber}:\n{JSON.stringify(ticketDetails, null, 2)}`);
+  } catch (error) {
+    if (error instanceof Object && 'message' in error)
+      await ctx.reply(`Ошибка загрузки тикета #${ticketNumber}: ${error.message}`);
+    else
+      console.log(error);
+  }
 });
 
 // обработка текстов в зависимости от state

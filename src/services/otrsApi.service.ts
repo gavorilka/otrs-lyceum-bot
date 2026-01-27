@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import {otrsBaseUrl} from "../config/vars";
+import {TicketCountResponse, TicketListResponse} from "../types/otrsResponse.interface";
 
 type OtrsAuth = {
     OTRSAgentInterface: string;
@@ -17,13 +18,6 @@ export class OtrsApiService {
     }
 
     set auth(value: OtrsAuth) {
-        if (
-            !value.ChallengeToken ||
-            !value.OTRSAgentInterface
-        ) {
-            throw new Error('auth must contain string fields OTRSAgentInterface and ChallengeToken');
-        }
-
         this._auth = {
             OTRSAgentInterface: value.OTRSAgentInterface,
             ChallengeToken: value.ChallengeToken,
@@ -61,7 +55,7 @@ export class OtrsApiService {
         return res;
     }
 
-    async getTicketList(filters = {}) {
+    async getTicketList(filters = {}): Promise<TicketListResponse | TicketCountResponse> {
         console.log(this._auth)
         return this._request('/tickets/getTicketList', filters);
     }
