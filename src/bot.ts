@@ -1,25 +1,43 @@
-import {Bot, GrammyError, HttpError, InlineKeyboard, session, Context, SessionFlavor} from "grammy";
-import { OtrsApiClient } from './otrsApiClient';
-import {botToken, otrsBaseUrl} from "./config/vars";
-import db from "./db/db";
-import {User} from "./db/entities/User";
-
-
-export interface SessionData {
-  state: 'WAITING_LOGIN' | 'WAITING_PASSWORD' | null;
-  tmpLogin: string | null;
-}
-
-export type MyContext = Context & SessionFlavor<SessionData>;
+import {Bot, GrammyError, HttpError, InlineKeyboard, session} from "grammy";
+import {botToken} from "./config/vars";
+import {MyContext, SessionData} from "./types/bot.interface";
+import otrsApiService from "./services/otrsApi.service";
+import {requireAuth} from "./middlewares/requireAuth";
+import userService from "./services/user.service";
 
 const bot = new Bot<MyContext>(botToken);
-const otrs = new OtrsApiClient(otrsBaseUrl);
-const userRepo = db.getRepository(User);
+
 
 console.log("Токен:", botToken);
+
 bot.use(session({ initial: (): SessionData => ({ state: null, tmpLogin: null }) }));
 
+const publicCommands = [
+  { command: "start", description: "Начало работы" },
+  { command: "login", description: "Войти в OTRS" },
+];
+
+const privateCommands = [
+  { command: "me", description: "Мой профиль" },
+  { command: "tickets", description: "Мои тикеты" },
+  { command: "logout", description: "Выйти" },
+];
+
 bot.command("start", async (ctx) => {
+  const user = await userService.getUser(ctx);
+
+  if (user) {
+    await ctx.api.setMyCommands(privateCommands, {
+      scope: { type: "chat", chat_id: ctx.chat!.id },
+    });
+
+    await ctx.reply(`С возвращением, ${user.otrsLogin}!`);
+  } else {
+    await ctx.api.setMyCommands(publicCommands, {
+      scope: {type: "chat", chat_id: ctx.chat!.id},
+    });
+  }
+
   //await ctx.reply("Привет! Вот меню:", { reply_markup: menu });
   await ctx.reply(`Привет, ${ctx.from?.first_name}! Отправь /login чтобы связать Telegram с аккаунтом OTRS.`);
   console.log(ctx);
@@ -30,13 +48,12 @@ bot.command('login', async (ctx) => {
   await ctx.reply('Введи логин OTRS:');
 });
 
-bot.command('me', async (ctx) => {
-  const ticketList = await otrs.getTicketList({ UserLogin: 'agent1' });
+bot.command('me', requireAuth, async (ctx) => {
+  const user = ctx.user;
+  const ticketList = await otrsApiService.getTicketList({ UserLogin: 'agent1' });
   console.log(ticketList)
   await ctx.reply(`Ответ ${ticketList}`);
 });
-
-
 
 // обработка текстов в зависимости от state
 bot.on('message:text', async (ctx) => {
@@ -58,18 +75,22 @@ bot.on('message:text', async (ctx) => {
     await ctx.reply('Пробую войти в OTRS...');
 
     try {
-      const { SessionValue, ChallengeToken, Me } = await otrs.login(login!, password);
+      const { SessionValue, ChallengeToken, Me } = await otrsApiService.login(login!, password);
 
-      await userRepo.upsert({
-        telegramUserId: ctx.from!.id,
-        otrsLogin: Me.UserLogin,
-        otrsSessionToken: SessionValue,
-        otrsChallengeToken: ChallengeToken
-      },["telegramUserId"]);
+      await userService.upsertByTelegramId({
+        TelegramUserId: ctx.from!.id,
+        OtrsLogin: Me.UserLogin,
+        SessionValue,
+        ChallengeToken
+      });
 
       await ctx.reply(
           `Успешный вход в OTRS как ${Me.UserLogin}.\nТеперь этот Telegram‑аккаунт привязан к OTRS пользователю.`
       );
+
+      await ctx.api.setMyCommands(privateCommands, {
+        scope: { type: "chat", chat_id: ctx.chat!.id },
+      });
     } catch (e: any) {
       console.error(e);
       await ctx.reply(`Не удалось войти в OTRS: ${e.message}`);

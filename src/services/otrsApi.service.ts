@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
+import {otrsBaseUrl} from "../config/vars";
 
-export class OtrsApiClient {
+export class OtrsApiService {
 
     protected _baseUrl: string;
     protected _auth: { [key: string]: string | null };
@@ -46,3 +47,5 @@ export class OtrsApiClient {
         return this._request('/tickets/getTicketList', filters);
     }
 }
+
+export default new OtrsApiService(otrsBaseUrl);
