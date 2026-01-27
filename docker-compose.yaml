@@ -1,0 +1,32 @@
+name: otrs_lyceum_bot
+services:
+  db:
+    image: postgres:16
+    container_name: otrs_lyceum_bot_db
+    restart: unless-stopped
+    environment:
+      PGPORT: ${DB_PORT:-5432}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-otrs_lyceum_bot}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --data-checksums"
+      TZ: Europe/Moscow
+    volumes:
+      - ${DB_DATA_LOCATION:-./postgres_data}:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-otrs_lyceum_bot}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - ${DB_PORT:-5432}
+    ports:
+      - '${DB_PORT:-5432}:${DB_PORT:-5432}'
+    networks:
+      - otrs_lyceum_bot_network
+
+networks:
+  otrs_lyceum_bot_network:
+    driver: bridge

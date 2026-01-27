@@ -21,12 +21,19 @@
   "scripts": {
     "dev": "tsx --watch src/main.ts",
     "build": "tsc",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "typeorm": "typeorm-ts-node-commonjs -d src/db/db.ts",
+    "migration:generate": "npm run typeorm -- migration:generate",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert"
   },
   "dependencies": {
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "grammy": "^1.38.2"
+    "grammy": "^1.38.2",
+    "pg": "^8.17.2",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.28"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.10",
@@ -35,6 +42,7 @@
     "@types/node-fetch": "^2.6.13",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.20.5",
+    "typeorm-ts-node-commonjs": "^0.3.20",
     "typescript": "^5.9.2"
   }
 }

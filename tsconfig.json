@@ -4,6 +4,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
 
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
     "removeComments": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"],

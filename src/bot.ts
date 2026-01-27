@@ -1,6 +1,8 @@
 import {Bot, GrammyError, HttpError, InlineKeyboard, session, Context, SessionFlavor} from "grammy";
 import { OtrsApiClient } from './otrsApiClient';
 import {botToken, otrsBaseUrl} from "./config/vars";
+import db from "./db/db";
+import {User} from "./db/entities/User";
 
 
 export interface SessionData {
@@ -12,6 +14,8 @@ export type MyContext = Context & SessionFlavor<SessionData>;
 
 const bot = new Bot<MyContext>(botToken);
 const otrs = new OtrsApiClient(otrsBaseUrl);
+const userRepo = db.getRepository(User);
+
 console.log("Токен:", botToken);
 bot.use(session({ initial: (): SessionData => ({ state: null, tmpLogin: null }) }));
 
@@ -55,6 +59,14 @@ bot.on('message:text', async (ctx) => {
 
     try {
       const { SessionValue, ChallengeToken, Me } = await otrs.login(login!, password);
+
+      await userRepo.upsert({
+        telegramUserId: ctx.from!.id,
+        otrsLogin: Me.UserLogin,
+        otrsSessionToken: SessionValue,
+        otrsChallengeToken: ChallengeToken
+      },["telegramUserId"]);
+
       await ctx.reply(
           `Успешный вход в OTRS как ${Me.UserLogin}.\nТеперь этот Telegram‑аккаунт привязан к OTRS пользователю.`
       );
