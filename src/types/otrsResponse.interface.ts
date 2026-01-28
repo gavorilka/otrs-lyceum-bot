@@ -3,11 +3,17 @@ export type OtrsAuth = {
     ChallengeToken: string;
 };
 
-export interface ApiResponse<T = unknown> {
+export type ApiRequest<T = unknown> = Partial<OtrsAuth> & T
+
+export interface LoginRequest {
+    User: string,
+    Password: string
+}
+
+export type ApiResponse<T = unknown> = {
     Response: 'OK' | 'ERROR';
     Message?: string;
-    [key: string]: unknown;
-}
+} & T;
 
 export interface MeResponse {
     Avatar: string;
@@ -23,7 +29,7 @@ export interface LoginSettings {
     Language: string;
 }
 
-export interface LoginResponse extends ApiResponse{
+export interface LoginResponse {
     SessionName: string;
     Settings: LoginSettings;
     Me: MeResponse;
@@ -83,13 +89,13 @@ export interface TicketShort {
     EscalationResponseTime: number;
 }
 
-export interface TicketListResponse extends ApiResponse{
+export interface TicketListResponse {
     Tickets: TicketShort[];
     Count?: number;
     NeedTokenUpdate?: 0 | 1;
 }
 
-export interface TicketCountResponse extends ApiResponse{
+export interface TicketCountResponse{
     Count: number;
     NeedTokenUpdate?: 0 | 1;
 }
@@ -157,27 +163,20 @@ export interface TicketListFilters {
 
 
 export interface CreateTicketResponse {
-    Response: 'OK' | 'ERROR';
-    Message?: string;
     TicketID?: number;
     FailedOperations?: string[];  // если createTicket с ошибками (dynamic fields и т.п.)
 }
 
 export interface UpdateTicketResponse {
-    Response: 'OK' | 'ERROR';
-    Message?: string;
     FailedUpdatedItems?: string[];  // "Title, Queue" если не обновилось
 }
 
 export interface CreateArticleResponse {
-    Response: 'OK' | 'ERROR';
-    Message?: string;
     ArticleID?: number;
     FailedOperations?: string[];
 }
 
 export interface ArticlesResponse {
-    Response: 'OK' | 'ERROR';
     Articles?: ArticleShort[];  // см. ниже
     Count?: number;
 }

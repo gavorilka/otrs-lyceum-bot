@@ -1,17 +1,16 @@
 import fetch from 'node-fetch';
 import {otrsBaseUrl} from "../config/vars";
 import {
+    ApiRequest, ApiResponse,
     ArticlesResponse,
     CreateArticleResponse,
-    CreateTicketParams, CreateTicketResponse,
+    CreateTicketParams, CreateTicketResponse, LoginRequest,
     LoginResponse,
     OtrsAuth,
     TicketCountResponse,
     TicketListFilters,
     TicketListResponse, UpdateTicketParams, UpdateTicketResponse
 } from "../types/otrsResponse.interface";
-
-type Json = Record<string, any>;
 
 export class OtrsApiService {
 
@@ -30,10 +29,13 @@ export class OtrsApiService {
         };
     }
 
-    protected async _request<T extends Json = Json>(endpoint: string, data: Json= {}): Promise<T> {
+    protected async _request<TRes = unknown, TReq = unknown>(endpoint: string, data: TReq | {} = {}): Promise<ApiResponse<TRes>> {
         const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const url = `${this._baseUrl}${normalizedEndpoint}`;
-        const body = { ...data, ...this._auth };
+        const body: ApiRequest<TReq | {}> = {
+            ...data,
+            ...this._auth
+        };
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,8 +46,8 @@ export class OtrsApiService {
     }
 
     async login(login: string, password: string) {
-        const data = { User: login, Password: password };
-        const res = await this._request<LoginResponse>('/auth/login', data);
+        const data: LoginRequest = { User: login, Password: password };
+        const res = await this._request<LoginResponse, LoginRequest>('/auth/login', data);
         if (res.Response === 'OK') {
             this.auth = {
                 OTRSAgentInterface: res.SessionValue,
@@ -68,7 +70,7 @@ export class OtrsApiService {
      */
     async getTicketList(
         filters: TicketListFilters = {},
-    ): Promise<TicketListResponse | TicketCountResponse> {
+    ): Promise<ApiResponse<TicketListResponse|TicketCountResponse>> {
         // Приведение массивов к формату API (comma-separated), если нужно
         const normalizeArray = (v?: string[] | number[]) =>
             Array.isArray(v) ? v.join(',') : v;
@@ -117,12 +119,12 @@ export class OtrsApiService {
     /**
      * Создание заявки.
      */
-    async createTicket(params: CreateTicketParams): Promise<CreateTicketResponse> {
-        return this._request('/tickets/createTicket', params);
+    async createTicket(params: ApiRequest<CreateTicketParams>) {
+        return this._request<CreateTicketResponse>('/tickets/createTicket', params);
     }
 
-    async updateTicket(params: UpdateTicketParams): Promise<UpdateTicketResponse> {
-        return this._request('/tickets/updateTicket', params);
+    async updateTicket(params: ApiRequest<UpdateTicketParams>) {
+        return this._request<UpdateTicketResponse>('/tickets/updateTicket', params);
     }
 
     async createArticle(params: {
@@ -130,26 +132,26 @@ export class OtrsApiService {
         Subject: string;
         Body: string;
         // + ArticleType, Estimated и т.д.
-    }): Promise<CreateArticleResponse> {
-        return this._request('/tickets/createArticle', params);
+    }) {
+        return this._request<CreateArticleResponse>('/tickets/createArticle', params);
     }
 
     /**
      * Получить записи к тикету по id.
      */
 
-    async getArticles(ticketId: number, opts?: { Limit?: number; Page?: number }): Promise<ArticlesResponse> {
-        return this._request('/tickets/getArticles', { TicketID: ticketId, ...opts });
+    async getArticles(ticketId: number, opts?: { Limit?: number; Page?: number }) {
+        return this._request<ArticlesResponse, {TicketID: number} >('/tickets/getArticles', { TicketID: ticketId, ...opts });
     }
 
     async updateField<T extends string>(
         endpoint: `/tickets/update${Capitalize<T>}`,
         params: { TicketID: number; [key: string]: unknown },
-    ): Promise<Json> {
+    ) {
         return this._request(endpoint, params);  // универсалка для updateQueue, updatePriority и т.п.
     }
 
-    async updateOwner(ticketId: number, newOwnerId: number): Promise<Json> {
+    async updateOwner(ticketId: number, newOwnerId: number) {
         return this.updateField('/tickets/updateOwner', { TicketID: ticketId, NewUserID: newOwnerId });
     }
 
