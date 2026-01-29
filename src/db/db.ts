@@ -9,7 +9,7 @@ export default new DataSource({
     username: dbUser,
     password: dbPassword,
     database: dbName,
-    synchronize: env !== "production", // true ⚠️только для dev
+    synchronize: true, //env !== "production", // true ⚠️только для dev
     entities: [
         env === "production"
         ? "dist/db/entities/*.js"

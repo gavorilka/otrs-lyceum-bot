@@ -20,7 +20,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx --watch src/main.ts",
-    "build": "tsc",
+    "build": "tsc && npm prune --production",
     "start": "node dist/main.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/db/db.ts",
     "migration:generate": "npm run typeorm -- migration:generate",

@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import {otrsBaseUrl} from "../config/vars";
 import {
-    ApiRequest, ApiResponse,
+    ApiRequest, ApiResponse, ArticleShort,
     ArticlesResponse,
     CreateArticleResponse,
     CreateTicketParams, CreateTicketResponse, LoginRequest,
@@ -9,7 +9,7 @@ import {
     OtrsAuth,
     TicketCountResponse,
     TicketListFilters,
-    TicketListResponse, UpdateTicketParams, UpdateTicketResponse
+    TicketListResponse, TicketShort, UpdateTicketParams, UpdateTicketResponse
 } from "../types/otrsResponse.interface";
 
 export class OtrsApiService {
@@ -155,6 +155,30 @@ export class OtrsApiService {
         return this.updateField('/tickets/updateOwner', { TicketID: ticketId, NewUserID: newOwnerId });
     }
 
+    async getSingleTicket(ticketId: number): Promise<TicketShort | null> {
+        const res = await this.getTicketList({
+            TicketID: ticketId,
+            ResultType: 'ARRAY',
+            Limit: 1
+        });
+
+        return (res as TicketListResponse).Tickets?.[0] || null;
+    }
+
+    async getTicketWithArticles(ticketId: number): Promise<{
+        ticket: TicketShort | null;
+        articles: ArticleShort[];
+    }> {
+        const [ticketRes, articlesRes] = await Promise.all([
+            this.getSingleTicket(ticketId),
+            this.getArticles(ticketId)
+        ]);
+
+        return {
+            ticket: ticketRes,
+            articles: (articlesRes as ArticlesResponse).Articles || []
+        };
+    }
 }
 
 export default new OtrsApiService(otrsBaseUrl);

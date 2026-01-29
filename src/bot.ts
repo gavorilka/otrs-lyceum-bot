@@ -56,7 +56,7 @@ bot.command('tickets', authMiddleware, async (ctx) => {
     const ticketList = new InlineKeyboard()
 
     for (const  ticket of response.Tickets) {
-      ticketList.text(ticket.Title, `ticket:${ticket.TicketNumber}`).row()
+      ticketList.text(ticket.Title, `ticket:${ticket.TicketID}`).row()
     }
 
     await ctx.reply(`Твои заявки: `, { reply_markup: ticketList });
@@ -80,17 +80,24 @@ bot.command("logout", authMiddleware, async (ctx) => {
 });
 
 bot.callbackQuery(/^ticket:(\d+)$/, async (ctx) => {
-  const ticketNumber = ctx.match[1];  // извлекаем номер тикета из callback_data
+  const ticketId = Number(ctx.match[1]);  // извлекаем номер тикета из callback_data
 
-  await ctx.answerCallbackQuery(`Загружаю тикет #${ticketNumber}`);
+  await ctx.answerCallbackQuery(`Загружаю тикет ${ticketId}`);
 
   try {
     // тут можно загрузить детали тикета по номеру
-    //const ticketDetails = await otrsApiService.getTicket(ticketNumber); // если есть такой метод
-    await ctx.reply(`Детали тикета #${ticketNumber}:\n{JSON.stringify(ticketDetails, null, 2)}`);
+    const ticketDetails = await otrsApiService.getTicketWithArticles(ticketId);
+    console.log(ticketDetails)
+
+    if(!ticketDetails.ticket) {
+      await ctx.reply(`Тикет #${ticketId} не найден.`);
+      return;
+    }
+
+    //await ctx.reply(`Детали тикета #${ticketId}:\n ${JSON.stringify(ticketDetails, null, 2)}`);
   } catch (error) {
     if (error instanceof Object && 'message' in error)
-      await ctx.reply(`Ошибка загрузки тикета #${ticketNumber}: ${error.message}`);
+      await ctx.reply(`Ошибка загрузки тикета #${ticketId}: ${error.message}`);
     else
       console.log(error);
   }
