@@ -1,5 +1,5 @@
 import {Context, SessionFlavor} from "grammy";
-import {User} from "../db/entities/User";
+import {User} from "../../db/entities/User";
 
 export interface SessionData {
     state: 'WAITING_LOGIN' | 'WAITING_PASSWORD' | null;

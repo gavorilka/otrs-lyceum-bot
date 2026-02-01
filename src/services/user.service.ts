@@ -1,6 +1,6 @@
 import db from "../db/db";
 import {User} from "../db/entities/User";
-import {MyContext} from "../types/bot.interface";
+import {MyContext} from "../shared/types/bot.interface";
 
 export class UserService {
     private repo = db.getRepository(User);

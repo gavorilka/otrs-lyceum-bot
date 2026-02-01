@@ -10,7 +10,7 @@ import {
     TicketCountResponse,
     TicketListFilters,
     TicketListResponse, TicketShort, UpdateTicketParams, UpdateTicketResponse
-} from "../types/otrsResponse.interface";
+} from "../shared/types/otrsResponse.interface";
 
 export class OtrsApiService {
 
@@ -42,7 +42,11 @@ export class OtrsApiService {
             body: JSON.stringify(body)
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        return response.json();
+        const resp: ApiResponse<TRes> = await response.json();
+        if(resp.Response == "ERROR") {
+            //throw new Error(`Сессия истекла пере авторизуйся /logout /login`)
+        }
+        return resp
     }
 
     async login(login: string, password: string) {
@@ -155,7 +159,7 @@ export class OtrsApiService {
         return this.updateField('/tickets/updateOwner', { TicketID: ticketId, NewUserID: newOwnerId });
     }
 
-    async getSingleTicket(ticketId: number): Promise<TicketShort | null> {
+    async getSingleTicket(ticketId: number): Promise<TicketShort> {
         const res = await this.getTicketList({
             TicketID: ticketId,
             ResultType: 'ARRAY',
@@ -166,7 +170,7 @@ export class OtrsApiService {
     }
 
     async getTicketWithArticles(ticketId: number): Promise<{
-        ticket: TicketShort | null;
+        ticket: TicketShort;
         articles: ArticleShort[];
     }> {
         const [ticketRes, articlesRes] = await Promise.all([
@@ -179,6 +183,7 @@ export class OtrsApiService {
             articles: (articlesRes as ArticlesResponse).Articles || []
         };
     }
+
 }
 
 export default new OtrsApiService(otrsBaseUrl);
