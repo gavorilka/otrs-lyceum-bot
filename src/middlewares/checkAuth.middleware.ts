@@ -7,7 +7,7 @@ export const checkAuthMiddleware: MiddlewareFn<MyContext> = async (ctx, next) =>
     const user = await userService.getUser(ctx);
 
     if (!user) {
-        return;
+        return await next();
     }
 
     otrsApiService.auth = {
