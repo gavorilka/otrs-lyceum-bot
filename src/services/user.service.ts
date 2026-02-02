@@ -7,6 +7,7 @@ export class UserService {
 
     async upsertByTelegramId(data: {
         TelegramUserId: number;
+        OtrsUserId:number;
         OtrsLogin: string;
         SessionValue?: string;
         ChallengeToken?: string;
@@ -14,6 +15,7 @@ export class UserService {
         await this.repo.upsert(
             {
                 telegramUserId: data.TelegramUserId,
+                otrsUserId: data.OtrsUserId,
                 otrsLogin: data.OtrsLogin,
                 otrsSessionToken: data.SessionValue,
                 otrsChallengeToken: data.SessionValue,

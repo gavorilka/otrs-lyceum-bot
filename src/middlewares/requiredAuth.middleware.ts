@@ -3,7 +3,7 @@ import {MyContext} from "../shared/types/bot.interface";
 import otrsApiService from "../services/otrsApi.service";
 import userService from "../services/user.service";
 
-export const authMiddleware: MiddlewareFn<MyContext> = async (ctx, next) => {
+export const requiredAuthMiddleware: MiddlewareFn<MyContext> = async (ctx, next) => {
     const user = await userService.getUser(ctx);
     //console.log(user);
     if (!user) {
@@ -17,7 +17,7 @@ export const authMiddleware: MiddlewareFn<MyContext> = async (ctx, next) => {
         OTRSAgentInterface: user.otrsSessionToken,
         ChallengeToken: user.otrsChallengeToken
     }
-    // если надо — кладём пользователя в ctx
+
     ctx.user = user;
     await next();
 };

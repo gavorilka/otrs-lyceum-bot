@@ -5,6 +5,9 @@ export class User {
     @PrimaryColumn({ type: "bigint", unique: true })
     telegramUserId!: number;
 
+    @Column({ type: "integer" })
+    otrsUserId!: number;
+
     @Column({ type: "varchar" })
     otrsLogin!: string;
 

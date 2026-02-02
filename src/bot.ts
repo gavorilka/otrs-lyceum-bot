@@ -2,12 +2,13 @@ import {Bot, GrammyError, HttpError, InlineKeyboard, session} from "grammy";
 import {botToken, otrsBaseUrl} from "./config/vars";
 import {MyContext, SessionData} from "./shared/types/bot.interface";
 import otrsApiService from "./services/otrsApi.service";
-import {authMiddleware} from "./middlewares/auth.middleware";
+import {requiredAuthMiddleware} from "./middlewares/requiredAuth.middleware";
 import userService from "./services/user.service";
 import {ticketsWithArticlesToReply} from "./utils/ticketsWithArticlesToReply";
 import {TicketListResponse} from "./shared/types/otrsResponse.interface";
 import {TicketState} from "./shared/types/otrs.enum";
 import {TicketStateLabelRu} from "./shared/const/otrs.consts";
+import {checkAuthMiddleware} from "./middlewares/checkAuth.middleware";
 
 const bot = new Bot<MyContext>(botToken);
 
@@ -27,7 +28,7 @@ const privateCommands = [
   { command: "logout", description: "Выйти" },
 ];
 
-bot.command("start", authMiddleware, async (ctx) => {
+bot.command("start", requiredAuthMiddleware, async (ctx) => {
 
   if (ctx.user) {
     await ctx.api.setMyCommands(privateCommands, {
@@ -48,10 +49,11 @@ bot.command('login', async (ctx) => {
   await ctx.reply('Введи логин OTRS:');
 });
 
-bot.command('tickets', authMiddleware, async (ctx) => {
+bot.command('tickets', requiredAuthMiddleware, async (ctx) => {
   try {
     const response = await otrsApiService.getTicketList({
-      Limit:10
+      Limit:10,
+      OwnerIDs: ctx.user?.otrsUserId ? [ctx.user?.otrsUserId] : undefined
     });
     if (!('Tickets' in response)) {
       return new Error("Response does not contain Tickets")
@@ -69,7 +71,7 @@ bot.command('tickets', authMiddleware, async (ctx) => {
   }
 });
 
-bot.command("logout", authMiddleware, async (ctx) => {
+bot.command("logout", requiredAuthMiddleware, async (ctx) => {
   // await userService.delete({
   //   telegramUserId: ctx.from!.id,
   // });
@@ -83,7 +85,7 @@ bot.command("logout", authMiddleware, async (ctx) => {
   await ctx.reply("👋 Ты вышел из системы. Используй /login для входа.");
 });
 
-bot.callbackQuery(/^ticket:(\d+)$/, authMiddleware, async (ctx) => {
+bot.callbackQuery(/^ticket:(\d+)$/, requiredAuthMiddleware, async (ctx) => {
   const ticketId = Number(ctx.match[1]);  // извлекаем номер тикета из callback_data
 
   await ctx.answerCallbackQuery(`Загружаю тикет ${ticketId}`);
@@ -117,7 +119,7 @@ bot.callbackQuery(/^ticket:(\d+)$/, authMiddleware, async (ctx) => {
   }
 });
 
-bot.callbackQuery(/^changeState:(\d+)Number:(\d+)$/, authMiddleware, async (ctx) => {
+bot.callbackQuery(/^changeState:(\d+)Number:(\d+)$/, requiredAuthMiddleware, async (ctx) => {
   const ticketId = Number(ctx.match[1]);
   const ticketNumber = Number(ctx.match[2]);
 
@@ -135,7 +137,7 @@ bot.callbackQuery(/^changeState:(\d+)Number:(\d+)$/, authMiddleware, async (ctx)
   await ctx.reply(`Выбери статус заявки #Номер_${ticketNumber}`,{reply_markup: stateList});
 })
 
-bot.callbackQuery(/^state:(\d+)Id:(\d+)Number:(\d+)$/, authMiddleware, async (ctx) => {
+bot.callbackQuery(/^state:(\d+)Id:(\d+)Number:(\d+)$/, requiredAuthMiddleware, async (ctx) => {
   const stateId = Number(ctx.match[1]);
   const ticketId = Number(ctx.match[2]);
   const ticketNumber = Number(ctx.match[3]);
@@ -154,40 +156,43 @@ bot.callbackQuery(/^state:(\d+)Id:(\d+)Number:(\d+)$/, authMiddleware, async (ct
 
 })
 // обработка текстов в зависимости от state + добавление Article по reply
-bot.on('message:text', authMiddleware, async (ctx) => {
+bot.on('message:text', checkAuthMiddleware, async (ctx) => {
   const msg = ctx.message;
   const text = msg.text.trim();
 
   // 1) Если это reply на сообщение бота с тикетом — добавляем Article
-  if (msg.reply_to_message && msg.reply_to_message.from?.is_bot) {
-    const replied = msg.reply_to_message;
+  if(ctx.user){
+    if (msg.reply_to_message && msg.reply_to_message.from?.is_bot) {
+      const replied = msg.reply_to_message;
 
-    // ищем номер тикета в тексте исходного сообщения, формат: #Номер_202601293600002
-    const match = replied.text?.match(/#Номер_(\d+)/);
-    if (match) {
-      const ticketNumber = match[1];
-      try {
-        const ticketId = (await otrsApiService.getTicketList({
-          TicketNumber: ticketNumber,
-          ResultType: 'ARRAY',
-          Limit: 1
-        }) as TicketListResponse).Tickets?.[0].TicketID
+      // ищем номер тикета в тексте исходного сообщения, формат: #Номер_202601293600002
+      const match = replied.text?.match(/#Номер_(\d+)/);
+      if (match) {
+        const ticketNumber = match[1];
+        try {
+          const ticketId = (await otrsApiService.getTicketList({
+            TicketNumber: ticketNumber,
+            ResultType: 'ARRAY',
+            Limit: 1
+          }) as TicketListResponse).Tickets?.[0].TicketID
 
-        await otrsApiService.createArticle({
-          Subject: 'Ответ из Telegram',
-          Body: text,
-          TicketID: ticketId
-        });
+          await otrsApiService.createArticle({
+            Subject: `Ответ из Telegram от ${ctx.from.first_name} ${ctx.from.first_name} (${ctx.from.username})`,
+            Body: text,
+            TicketID: ticketId
+          });
 
-        await ctx.reply(`Комментарий добавлен в тикет #${ticketNumber}`);
-      } catch (e: any) {
-        console.error(e);
-        await ctx.reply(`Не удалось добавить комментарий в тикет #${ticketNumber}: ${e.message}`);
+          await ctx.reply(`Комментарий добавлен в тикет #Номер_${ticketNumber}`);
+        } catch (e: any) {
+          console.error(e);
+          await ctx.reply(`Не удалось добавить комментарий в тикет #Номер_${ticketNumber}: ${e.message}`);
+        }
+
+        // reply‑логика обработана, дальше state не трогаем
+        return;
       }
-
-      // reply‑логика обработана, дальше state не трогаем
-      return;
     }
+
   }
 
   // 2) Логика авторизации по state
@@ -212,6 +217,7 @@ bot.on('message:text', authMiddleware, async (ctx) => {
 
       await userService.upsertByTelegramId({
         TelegramUserId: ctx.from!.id,
+        OtrsUserId:Me.ID,
         OtrsLogin: Me.UserLogin,
         SessionValue,
         ChallengeToken,
