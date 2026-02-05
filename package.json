@@ -25,7 +25,9 @@
     "typeorm": "typeorm-ts-node-commonjs -d src/db/db.ts",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "docker:buildx-init": "docker buildx create --name multi-arch-builder --use || docker buildx use multi-arch-builder",
+    "docker:buildx": "docker buildx build --platform linux/amd64,linux/arm64 -t gavorilka/otrs-lyceum-bot:latest --push ."
   },
   "dependencies": {
     "dotenv": "^17.2.2",
