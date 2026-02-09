@@ -1,26 +1,18 @@
 name: otrs_lyceum_bot
 services:
   bot:
-    build: .  # Использует Dockerfile из предыдущего ответа
+    image: gavorilka/otrs-lyceum-bot:latest
     container_name: otrs_lyceum_bot
     restart: unless-stopped
     environment:
       DB_HOST: db
       NODE_ENV: production
       TZ: Europe/Moscow
-    #volumes:
-    #  - ${BOT_DATA_LOCATION:-./bot_data}:/app/data  # Если нужны логи/файлы
     env_file:
       - .env
     depends_on:
       db:
-        condition: service_healthy  # Ждёт готовности БД
-    #healthcheck:
-    #  test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })" ]
-    #  interval: 30s
-    #  timeout: 10s
-    #  retries: 3
-    #  start_period: 40s
+        condition: service_healthy
     ports:
       - '${APP_PORT:-3000}:${APP_PORT:-3000}'
     networks:

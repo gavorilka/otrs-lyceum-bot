@@ -8,6 +8,8 @@ const app = express();
 // health-check endpoint
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
+  bot.api.sendMessage(580852515, "✅ Health check passed"
+  )
 });
 
 async function bootstrap() {
@@ -23,7 +25,7 @@ async function bootstrap() {
       console.log(`Server running on http://localhost:${appPort}`);
     });
 
-    bot.start()
+    bot.start({onStart: async () => console.log("🤖 Bot started")});
   } catch (err) {
     console.error("❌ Startup error", err);
     process.exit(1);

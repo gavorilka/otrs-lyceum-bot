@@ -9,6 +9,7 @@ import {TicketListResponse} from "./shared/types/otrsResponse.interface";
 import {TicketState} from "./shared/types/otrs.enum";
 import {TicketStateLabelRu} from "./shared/const/otrs.consts";
 import {checkAuthMiddleware} from "./middlewares/checkAuth.middleware";
+import {filterTgTicketFunc} from "./utils/filterTgTicketFunc";
 
 const bot = new Bot<MyContext>(botToken);
 
@@ -23,8 +24,13 @@ const publicCommands = [
 ];
 
 const privateCommands = [
-  //{ command: "me", description: "Мой профиль" },
-  { command: "tickets", description: "Мои тикеты" },
+  { command: "my_queue_tickets", description: "Заявки в моих очередях" },
+  { command: "new_queue_tickets", description: "Новые заявки в моих очередях" },
+  { command: "open_queue_tickets", description: "Открытые заявки в моих очередях" },
+  { command: "my_tickets", description: "Мои тикеты" },
+  { command: "my_new_and_open_tickets", description: "Мои тикеты новые и открытые" },
+  { command: "my_new_tickets", description: "Мои новые заявки" },
+  { command: "my_open_tickets", description: "Мои открытые заявки" },
   { command: "logout", description: "Выйти" },
 ];
 
@@ -49,26 +55,32 @@ bot.command('login', async (ctx) => {
   await ctx.reply('Введи логин OTRS:');
 });
 
-bot.command('tickets', requiredAuthMiddleware, async (ctx) => {
-  try {
-    const response = await otrsApiService.getTicketList({
-      Limit:10,
-      OwnerIDs: ctx.user?.otrsUserId ? [ctx.user?.otrsUserId] : undefined
-    });
-    if (!('Tickets' in response)) {
-      return new Error("Response does not contain Tickets")
-    }
+bot.command('my_queue_tickets', requiredAuthMiddleware, async (ctx) => {
+  await filterTgTicketFunc(ctx,{ ViewID: -2 },"Заявки в твоих очередях: ");
+});
 
-    const ticketList = new InlineKeyboard()
+bot.command('new_queue_tickets', requiredAuthMiddleware, async (ctx) => {
+  await filterTgTicketFunc(ctx,{ ViewID: -2, StateIDs: [TicketState.New]},"Новые заявки в твоих очередях: ");
+});
 
-    for (const  ticket of response.Tickets) {
-      ticketList.text(ticket.Title, `ticket:${ticket.TicketID}`).row()
-    }
+bot.command('open_queue_tickets', requiredAuthMiddleware, async (ctx) => {
+    await filterTgTicketFunc(ctx,{ ViewID: -2, StateIDs: [TicketState.Open]},"Открытые заявки в твоих очередях: ");
+})
 
-    await ctx.reply(`Твои заявки: `, { reply_markup: ticketList });
-  } catch (error: any) {
-    await ctx.reply(error.message);
-  }
+bot.command('my_tickets', requiredAuthMiddleware, async (ctx) => {
+  await filterTgTicketFunc(ctx,{ OwnerIDs: ctx.user?.otrsUserId ? [ctx.user?.otrsUserId] : undefined},"Твои заявки: ");
+});
+
+bot.command('my_new_and_open_tickets', requiredAuthMiddleware, async (ctx) => {
+    await filterTgTicketFunc(ctx,{ OwnerIDs: ctx.user?.otrsUserId ? [ctx.user?.otrsUserId] : undefined, StateIDs: [TicketState.New, TicketState.Open]},"Твои новые и открытые заявки: ");
+});
+
+bot.command('my_new_tickets', requiredAuthMiddleware, async (ctx) => {
+    await filterTgTicketFunc(ctx,{ OwnerIDs: ctx.user?.otrsUserId ? [ctx.user?.otrsUserId] : undefined, StateIDs: [TicketState.New]},"Твои новые заявки: ");
+});
+
+bot.command('my_open_tickets', requiredAuthMiddleware, async (ctx) => {
+    await filterTgTicketFunc(ctx,{ OwnerIDs: ctx.user?.otrsUserId ? [ctx.user?.otrsUserId] : undefined, StateIDs: [TicketState.Open]},"Твои открытые заявки: ");
 });
 
 bot.command("logout", requiredAuthMiddleware, async (ctx) => {
@@ -172,7 +184,6 @@ bot.on('message:text', checkAuthMiddleware, async (ctx) => {
         try {
           const ticketId = (await otrsApiService.getTicketList({
             TicketNumber: ticketNumber,
-            ResultType: 'ARRAY',
             Limit: 1
           }) as TicketListResponse).Tickets?.[0].TicketID
 

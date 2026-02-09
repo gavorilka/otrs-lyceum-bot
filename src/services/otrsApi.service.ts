@@ -113,7 +113,7 @@ export class OtrsApiService {
      */
 
     async getTicketCount(filters: Omit<TicketListFilters, 'ResultType'> = {}): Promise<number> {
-        const res = await this.getTicketList({ ...filters, ResultType: 'COUNT' });
+        const res = await this.getTicketList({ ...filters, Count: true });
         if ((res as TicketCountResponse).Count != null) {
             return (res as TicketCountResponse).Count;
         }
@@ -162,7 +162,6 @@ export class OtrsApiService {
     async getSingleTicket(ticketId: number): Promise<TicketShort> {
         const res = await this.getTicketList({
             TicketID: ticketId,
-            ResultType: 'ARRAY',
             Limit: 1
         });
 

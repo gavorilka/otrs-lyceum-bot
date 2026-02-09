@@ -149,7 +149,7 @@ export interface TicketListFilters {
     SortBy?: string | string[];   // Age, EscalationSolutionTime и т.п.
     OrderBy?: 'Up' | 'Down' | ('Up' | 'Down')[];
 
-    ResultType?: 'COUNT' | 'ARRAY'; // COUNT|ARRAY в Perl
+    Count?: boolean;  // если true, то вернёт только Count, без массива Tickets
     DynamicFieldsMode?: TicketDynamicFieldsMode;
 
     // пагинация
