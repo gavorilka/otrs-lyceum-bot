@@ -9,14 +9,11 @@ import {TicketListResponse} from "./shared/types/otrsResponse.interface";
 import {TicketState} from "./shared/types/otrs.enum";
 import {TicketStateLabelRu} from "./shared/const/otrs.consts";
 import {checkAuthMiddleware} from "./middlewares/checkAuth.middleware";
-import {filterTgTicketFunc} from "./utils/filterTgTicketFunc";
+import {filterTgTicketFunc, renderTicketPage} from "./utils/filterTgTicketFunc";
 
 const bot = new Bot<MyContext>(botToken);
 
-
-console.log("Токен:", botToken);
-
-bot.use(session({ initial: (): SessionData => ({ state: null, tmpLogin: null }) }));
+bot.use(session({ initial: (): SessionData => ({ state: null, tmpLogin: null  }) }));
 
 const publicCommands = [
   { command: "start", description: "Начало работы" },
@@ -95,6 +92,18 @@ bot.command("logout", requiredAuthMiddleware, async (ctx) => {
   });
 
   await ctx.reply("👋 Ты вышел из системы. Используй /login для входа.");
+});
+
+bot.callbackQuery(/^page:(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const page = Number(ctx.match[1]);
+
+  await renderTicketPage(ctx, page, true);
+});
+
+bot.callbackQuery("noop", async (ctx) => {
+  await ctx.answerCallbackQuery();
 });
 
 bot.callbackQuery(/^ticket:(\d+)$/, requiredAuthMiddleware, async (ctx) => {
@@ -187,13 +196,13 @@ bot.on('message:text', checkAuthMiddleware, async (ctx) => {
             Limit: 1
           }) as TicketListResponse).Tickets?.[0].TicketID
 
-          await otrsApiService.createArticle({
+          const sendArticle = await otrsApiService.createArticle({
             Subject: `Ответ из Telegram от ${ctx.from.first_name} ${ctx.from.first_name} (${ctx.from.username})`,
             Body: text,
             TicketID: ticketId
           });
-
-          await ctx.reply(`Комментарий добавлен в тикет #Номер_${ticketNumber}`);
+          if(sendArticle.Response === "OK")
+            await ctx.reply(`Комментарий добавлен в тикет #Номер_${ticketNumber}`);
         } catch (e: any) {
           console.error(e);
           await ctx.reply(`Не удалось добавить комментарий в тикет #Номер_${ticketNumber}: ${e.message}`);
